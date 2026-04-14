@@ -43,10 +43,11 @@
  * @endcode
  */
 class BiomedicalPipeline {
-protected:
+private:
     IBiomedicalSensor* sensor;      ///< Pointer to sensor implementation
     SignalBuffer<float> buffer;     ///< Internal ring buffer
     WindowExtractor extractor;      ///< Window extraction dispatcher
+    float* windowBuffer;            ///< Pre-allocated window array (heap, not stack)
 
 public:
     /**
@@ -62,12 +63,15 @@ public:
     BiomedicalPipeline(IBiomedicalSensor* sensor, int windowSize, int stepSize = -1)
         : sensor(sensor),
           buffer(windowSize),
-          extractor(windowSize, stepSize == -1 ? windowSize : stepSize) {}
+          extractor(windowSize, stepSize == -1 ? windowSize : stepSize),
+          windowBuffer(new float[windowSize]) {}
 
     /**
      * @brief Virtual destructor for proper cleanup
      */
-    virtual ~BiomedicalPipeline() = default;
+    virtual ~BiomedicalPipeline() {
+        delete[] windowBuffer;
+    }
 
     /**
      * @brief Core processing loop - call this from Arduino loop()
@@ -89,9 +93,8 @@ public:
         buffer.push(sample);
 
         // Step 3 & 4: Try to extract window and invoke callback
-        float window[buffer.getMaxSize()];
-        if (extractor.extract(buffer, window)) {
-            onWindowReady(window, extractor.getWindowSize());
+        if (extractor.extract(buffer, windowBuffer)) {
+            onWindowReady(windowBuffer, extractor.getWindowSize());
         }
     }
 

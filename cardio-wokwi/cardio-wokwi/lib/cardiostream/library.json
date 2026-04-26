@@ -1,0 +1,7 @@
+{
+  "name": "cardiostream",
+  "version": "1.0.0",
+  "description": "CardioStream IoT Framework",
+  "frameworks": "arduino",
+  "platforms": "espressif32"
+}

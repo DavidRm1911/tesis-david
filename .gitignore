@@ -1,0 +1,12 @@
+# PlatformIO
+cardio-wokwi/cardio-wokwi/.pio/
+cardio-wokwi/cardio-wokwi/.vscode/
+
+# Certificados y claves AWS IoT — NUNCA subir al repositorio
+cardio-wokwi/cardio-wokwi/src/secrets.h
+cardio-wokwi/cardio-wokwi/certs/private.key
+cardio-wokwi/cardio-wokwi/certs/device.crt
+
+# AmazonRootCA1.pem es público pero tampoco hace falta en el repo
+cardio-wokwi/cardio-wokwi/certs/AmazonRootCA1.pem
+cardio-wokwi/cardio-wokwi/certs/AmazonRootCA3.pem

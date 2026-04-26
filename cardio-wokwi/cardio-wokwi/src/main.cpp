@@ -16,6 +16,7 @@
 #define LED_R     25
 #define LED_G     26
 #define LED_B     27
+#define BUZZER    33
 #define SDA_PIN   21
 #define SCL_PIN   22
 
@@ -41,6 +42,16 @@ void rgbSet(bool r, bool g, bool b) {
     digitalWrite(LED_R, r);
     digitalWrite(LED_G, g);
     digitalWrite(LED_B, b);
+}
+
+void beep(uint16_t freqHz, uint16_t durationMs) {
+    // delay() es el único timer confiable en Wokwi simulation
+    uint32_t halfMs    = max(1U, 500U / (uint32_t)freqHz);
+    int      cycles    = durationMs / (2 * halfMs);
+    for (int i = 0; i < cycles; i++) {
+        digitalWrite(BUZZER, HIGH); delay(halfMs);
+        digitalWrite(BUZZER, LOW);  delay(halfMs);
+    }
 }
 
 // ── MockAD8232Sensor ──────────────────────────────────────────
@@ -69,11 +80,16 @@ public:
     }
 
     float readSample() override {
-        float t = sampleCount++ / (float)samplingRate;
-        return 0.5f * sinf(2.0f * M_PI * 1.0f  * t)
-             + 1.2f * sinf(2.0f * M_PI * 2.0f  * t + 1.5f)
-             + 0.6f * sinf(2.0f * M_PI * 3.0f  * t + 3.0f)
-             + 0.3f * sinf(2.0f * M_PI * 10.0f * t)
+        float t = sampleCount / (float)samplingRate;
+        // Cada 5 ventanas (5*256 muestras) inyecta 1 ventana de alta amplitud
+        // simula una arritmia/ruido → stddev sube a ~3.0 → LED rojo
+        bool burst = ((sampleCount / 256) % 5 == 4);
+        float amp  = burst ? 3.0f : 1.0f;
+        sampleCount++;
+        return amp * (0.5f * sinf(2.0f * M_PI * 1.0f  * t)
+                    + 1.2f * sinf(2.0f * M_PI * 2.0f  * t + 1.5f)
+                    + 0.6f * sinf(2.0f * M_PI * 3.0f  * t + 3.0f)
+                    + 0.3f * sinf(2.0f * M_PI * 10.0f * t))
              + noiseAmplitude * gaussianNoise();
     }
 
@@ -109,6 +125,12 @@ public:
         else if (!mqttOk)  rgbSet(true,  true,  false);
         else               rgbSet(false, true,  false);
 
+        // Buzzer: doble beep en anomalia
+        if (anomaly) {
+            beep(1000, 200); delay(80);
+            beep(1500, 200);
+        }
+
         // OLED
         if (oledOk) {
             display.clearDisplay();
@@ -125,10 +147,11 @@ public:
         }
 
         // Serial
-        Serial.printf("[V#%d] mean=%.4f std=%.4f %s\n",
-            windowCount, mean, stddev, anomaly ? "[!ANOMALIA]" : "");
+        const char* ledColor = anomaly ? "ROJO" : (mqttOk ? "VERDE" : "AMARILLO");
+        Serial.printf("[V#%d] mean=%.4f std=%.4f %-12s LED:%s\n",
+            windowCount, mean, stddev, anomaly ? "[!ANOMALIA]" : "[Normal]", ledColor);
 
-        // MQTT
+        // MQTT + parpadeo azul al publicar
         if (mqttOk && mqttClient.connected()) {
             JsonDocument doc;
             doc["patientId"]   = "P001";
@@ -139,7 +162,9 @@ public:
             doc["timestamp"]   = millis();
             char payload[256];
             serializeJson(doc, payload);
-            mqttClient.publish(TOPIC_ECG, payload);
+            if (mqttClient.publish(TOPIC_ECG, payload)) {
+                digitalWrite(LED_B, HIGH); delay(60); digitalWrite(LED_B, LOW);
+            }
         }
     }
 };
@@ -157,8 +182,12 @@ CardioStreamApp* app = nullptr;
 void setup() {
     Serial.begin(115200);
 
-    // LED RGB — parpadeo de inicio para confirmar firmware
+    // LED RGB + Buzzer
     pinMode(LED_R, OUTPUT); pinMode(LED_G, OUTPUT); pinMode(LED_B, OUTPUT);
+    pinMode(BUZZER, OUTPUT);
+    // Beep de inicio — confirma que el buzzer funciona
+    beep(1500, 150); delay(50);
+    beep(2000, 150); delay(50);
     for (int i = 0; i < 3; i++) {
         rgbSet(true, true, true); delay(150);
         rgbSet(false, false, false); delay(150);

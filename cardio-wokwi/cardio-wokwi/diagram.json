@@ -11,7 +11,31 @@
       "left": -10,
       "attrs": { "i2cAddress": "0x3c" }
     },
-    { "type": "wokwi-rgb-led", "id": "rgb", "top": 23.2, "left": 375.5, "attrs": {} }
+    { "type": "wokwi-buzzer", "id": "bz", "top": -199.2, "left": 299.4, "attrs": {} },
+    {
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": -20,
+      "left": 390,
+      "attrs": { "value": "1000" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r2",
+      "top": -20,
+      "left": 430,
+      "attrs": { "value": "1000" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r3",
+      "top": -20,
+      "left": 470,
+      "attrs": { "value": "1000" }
+    },
+    { "type": "wokwi-led", "id": "ledR", "top": 30, "left": 390, "attrs": { "color": "red" } },
+    { "type": "wokwi-led", "id": "ledG", "top": 30, "left": 430, "attrs": { "color": "green" } },
+    { "type": "wokwi-led", "id": "ledB", "top": 30, "left": 470, "attrs": { "color": "blue" } }
   ],
   "connections": [
     [ "esp:TX", "$serialMonitor:RX", "", [] ],
@@ -20,10 +44,17 @@
     [ "esp:22", "oled:SCL", "yellow", [] ],
     [ "esp:3V3", "oled:VCC", "red", [] ],
     [ "esp:GND.1", "oled:GND", "black", [] ],
-    [ "esp:25", "rgb:R", "red", [] ],
-    [ "esp:26", "rgb:G", "green", [] ],
-    [ "esp:27", "rgb:B", "blue", [] ],
-    [ "esp:GND.1", "rgb:COM", "black", [] ]
+    [ "esp:25", "r1:1", "red", [] ],
+    [ "r1:2", "ledR:A", "red", [] ],
+    [ "ledR:C", "esp:GND.1", "black", [] ],
+    [ "esp:26", "r2:1", "green", [] ],
+    [ "r2:2", "ledG:A", "green", [] ],
+    [ "ledG:C", "esp:GND.1", "black", [] ],
+    [ "esp:33", "bz:1", "orange", [] ],
+    [ "esp:GND.1", "bz:2", "black", [] ],
+    [ "esp:27", "r3:1", "blue", [] ],
+    [ "r3:2", "ledB:A", "blue", [] ],
+    [ "ledB:C", "esp:GND.1", "black", [] ]
   ],
   "dependencies": {}
 }
